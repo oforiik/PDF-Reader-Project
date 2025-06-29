@@ -1,0 +1,13 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<h1>Welcome, {{ user.username }}!</h1>
+<div class="actions">
+    <a href="{% url 'converter:upload' %}" class="btn btn-primary">
+        Convert New PDF
+    </a>
+    <a href="{% url 'dashboard:file_manager' %}" class="btn btn-secondary">
+        View Previous Files
+    </a>
+</div>
+{% endblock %}
