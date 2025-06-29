@@ -15,57 +15,74 @@ def upload_pdf(request):
     return render(request, 'converter/upload.html')
 
 @login_required
-def select_pages(request, file_id):
-    doc = get_object_or_404(PDFDocument, id=file_id, user=request.user)
+def page_selection(request, file_id):
+    document = get_object_or_404(PdfDocument, id=file_id, user=request.user)
+    thumbnail_dir = os.path.join(settings.MEDIA_ROOT, 'thumbnails', str(document.id))
     
-    # Generate page thumbnails (first 24 pages)
-    thumbnails = generate_thumbnails(doc.original_file.path)
+    if not os.path.exists(thumbnail_dir):
+        thumbnails = generate_page_thumbnails(
+            document.file.path,
+            thumbnail_dir
+        )
+    else:
+        thumbnails = [f for f in os.listdir(thumbnail_dir) if f.endswith('.jpg')]
     
+    # Process deletion requests
     if request.method == 'POST':
         deleted_pages = request.POST.getlist('delete_pages')
-        doc.pages_deleted = deleted_pages
-        doc.save()
-        return redirect('converter:edit_text', file_id=doc.id)
+        document.deleted_pages = json.dumps([int(p) for p in deleted_pages])
+        document.save()
+        return redirect('edit_text', file_id=document.id)
     
-    return render(request, 'converter/page_select.html', {
-        'doc': doc,
-        'thumbnails': thumbnails
+    return render(request, 'converter/page_selection.html', {
+        'document': document,
+        'thumbnails': thumbnails,
+        'thumbnail_url': os.path.join(settings.MEDIA_URL, 'thumbnails', str(document.id))
     })
 
 @login_required
 def edit_text(request, file_id):
-    doc = get_object_or_404(PDFDocument, id=file_id, user=request.user)
-    try:
-        processed_doc = ProcessedDocument.objects.get(pdf=doc)
-    except ProcessedDocument.DoesNotExist:
-        # Create processed document if it doesn't exist
-        processed_doc = ProcessedDocument.objects.create(
-            pdf=doc,
-            extracted_text=extract_pdf_text(doc.original_file.path)
-        )
+    document = get_object_or_404(PdfDocument, id=file_id, user=request.user)
+    
+    # Extract text excluding deleted pages
+    deleted_pages = json.loads(document.deleted_pages) if document.deleted_pages else []
+    text = extract_pdf_text(document.file.path, excluded_pages=deleted_pages)
     
     if request.method == 'POST':
-        edited_text = request.POST.get('edited_text', '')
-        processed_doc.extracted_text = edited_text
-        processed_doc.save()
-        return redirect('converter:generate_audio', file_id=doc.id)
+        edited_text = request.POST.get('text_content', '')
+        # Save edited text to database or session
+        request.session['edited_text'] = edited_text
+        return redirect('generate_audio', file_id=document.id)
     
     return render(request, 'converter/edit_text.html', {
-        'doc': doc,
-        'text': processed_doc.extracted_text
+        'document': document,
+        'initial_text': text
     })
-
+    
 @login_required
 def generate_audio(request, file_id):
-    doc = get_object_or_404(PDFDocument, id=file_id, user=request.user)
-    processed_doc = ProcessedDocument.objects.get(pdf=doc)
+    document = get_object_or_404(PdfDocument, id=file_id, user=request.user)
     
-    if request.method == 'POST':
-        # TODO: Implement audio generation logic here
-        return redirect('converter:play_audio', audio_id=processed_doc.id)
+    # Get edited text from session
+    text = request.session.get('edited_text', '')
     
-    return render(request, 'converter/generate_audio.html', {
-        'doc': doc
+    # Generate unique filename
+    audio_filename = f"audio_{document.id}_{int(time.time())}.mp3"
+    audio_path = os.path.join(settings.MEDIA_ROOT, 'audio', audio_filename)
+    
+    # Start background task
+    generate_audio_task.delay(text, audio_path)
+    
+    # Create audio object
+    audio_file = AudioFile.objects.create(
+        document=document,
+        audio_file=os.path.join('audio', audio_filename),
+        status='PROCESSING'
+    )
+    
+    return render(request, 'converter/processing.html', {
+        'document': document,
+        'audio_file': audio_file
     })
 
 @login_required

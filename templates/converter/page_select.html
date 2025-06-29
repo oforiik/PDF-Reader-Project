@@ -1,45 +1,80 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="page-grid">
-  {% for thumbnail in thumbnails %}
-  <div class="page-item" data-page="{{ forloop.counter0 }}">
-    <img src="{{ thumbnail.url }}" alt="Page {{ forloop.counter }}">
-    <button class="delete-btn">✕</button>
+<div class="page-grid-container">
+  <div class="page-grid">
+    {% for thumb in thumbnails %}
+    <div class="page-item" data-page="{{ forloop.counter }}">
+      <img src="{{ thumbnail_url }}/{{ thumb }}" alt="Page {{ forloop.counter }}">
+      <div class="page-actions">
+        <input type="checkbox" name="delete_pages" value="{{ forloop.counter }}" 
+               id="delete_page_{{ forloop.counter }}">
+        <label for="delete_page_{{ forloop.counter }}">Delete</label>
+      </div>
+    </div>
+    {% endfor %}
   </div>
-  {% endfor %}
+  
+  <form method="post">
+    {% csrf_token %}
+    <div id="selected-pages-container"></div>
+    <button type="submit" class="btn btn-primary">Continue to Text Editing</button>
+  </form>
 </div>
 
-<form method="post" id="pageForm">
-  {% csrf_token %}
-  <input type="hidden" name="delete_pages" id="deletePagesInput">
-  <button type="submit">Continue</button>
-</form>
-
 <script>
-  // JavaScript to handle page deletion
-  document.querySelectorAll('.delete-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const pageItem = btn.closest('.page-item');
-      const pageIndex = pageItem.dataset.page;
-      
-      // Toggle deletion UI
-      pageItem.classList.toggle('deleted');
-      
-      // Update hidden input value
-      const deletedPages = new Set(
-        document.getElementById('deletePagesInput').value.split(',')
-      );
-      
-      if (deletedPages.has(pageIndex)) {
-        deletedPages.delete(pageIndex);
-      } else {
-        deletedPages.add(pageIndex);
-      }
-      
-      document.getElementById('deletePagesInput').value = 
-        Array.from(deletedPages).join(',');
-    });
+document.addEventListener('DOMContentLoaded', function() {
+  const container = document.querySelector('.page-grid');
+  const selectedContainer = document.getElementById('selected-pages-container');
+  
+  container.addEventListener('change', function(e) {
+    if (e.target.matches('input[name="delete_pages"]')) {
+      updateSelectedPages();
+    }
   });
+  
+  function updateSelectedPages() {
+    selectedContainer.innerHTML = '';
+    document.querySelectorAll('input[name="delete_pages"]:checked').forEach(input => {
+      const hiddenInput = document.createElement('input');
+      hiddenInput.type = 'hidden';
+      hiddenInput.name = 'delete_pages';
+      hiddenInput.value = input.value;
+      selectedContainer.appendChild(hiddenInput);
+    });
+  }
+});
 </script>
+
+<style>
+.page-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.page-item {
+  position: relative;
+  border: 1px solid #ddd;
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.page-item img {
+  width: 100%;
+  height: auto;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.page-actions {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: rgba(255,255,255,0.8);
+  padding: 5px;
+  border-radius: 3px;
+}
+</style>
 {% endblock %}

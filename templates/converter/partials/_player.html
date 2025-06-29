@@ -1,0 +1,133 @@
+<div class="audio-player">
+    <audio id="audio-player" src="{{ audio_file_url }}"></audio>
+    
+    <div class="player-controls">
+      <button id="play-btn" class="btn btn-sm btn-primary">▶ Play</button>
+      <button id="pause-btn" class="btn btn-sm btn-secondary">⏸ Pause</button>
+      <button id="restart-btn" class="btn btn-sm btn-outline-secondary">⏮ Restart</button>
+    </div>
+    
+    <div class="progress-container">
+      <div id="progress-bar" class="progress-bar">
+        <div id="progress" class="progress"></div>
+      </div>
+      <div class="time-display">
+        <span id="current-time">0:00</span> / 
+        <span id="total-time">0:00</span>
+      </div>
+    </div>
+    
+    <div class="download-container">
+      <a href="{{ audio_file_url }}" download class="btn btn-success">
+        ⬇ Download Audio
+      </a>
+    </div>
+  </div>
+  
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const audio = document.getElementById('audio-player');
+    const playBtn = document.getElementById('play-btn');
+    const pauseBtn = document.getElementById('pause-btn');
+    const restartBtn = document.getElementById('restart-btn');
+    const progress = document.getElementById('progress');
+    const progressBar = document.getElementById('progress-bar');
+    const currentTime = document.getElementById('current-time');
+    const totalTime = document.getElementById('total-time');
+    
+    // Format time (seconds to MM:SS)
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+    
+    // Update progress bar
+    function updateProgress() {
+      const percent = (audio.currentTime / audio.duration) * 100;
+      progress.style.width = `${percent}%`;
+      currentTime.textContent = formatTime(audio.currentTime);
+    }
+    
+    // Set total time when metadata loads
+    audio.addEventListener('loadedmetadata', () => {
+      totalTime.textContent = formatTime(audio.duration);
+    });
+    
+    // Update progress during playback
+    audio.addEventListener('timeupdate', updateProgress);
+    
+    // Play/pause controls
+    playBtn.addEventListener('click', () => audio.play());
+    pauseBtn.addEventListener('click', () => audio.pause());
+    restartBtn.addEventListener('click', () => {
+      audio.currentTime = 0;
+      audio.play();
+    });
+    
+    // Click on progress bar to seek
+    progressBar.addEventListener('click', (e) => {
+      const rect = progressBar.getBoundingClientRect();
+      const percent = (e.clientX - rect.left) / rect.width;
+      audio.currentTime = percent * audio.duration;
+    });
+    
+    // Update button states
+    audio.addEventListener('play', () => {
+      playBtn.disabled = true;
+      pauseBtn.disabled = false;
+    });
+    
+    audio.addEventListener('pause', () => {
+      playBtn.disabled = false;
+      pauseBtn.disabled = true;
+    });
+  });
+  </script>
+  
+  <style>
+  .audio-player {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #f8f9fa;
+  }
+  
+  .player-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+  
+  .progress-container {
+    margin: 15px 0;
+  }
+  
+  .progress-bar {
+    height: 10px;
+    background: #e9ecef;
+    border-radius: 5px;
+    cursor: pointer;
+    position: relative;
+  }
+  
+  .progress {
+    height: 100%;
+    background: #0d6efd;
+    border-radius: 5px;
+    width: 0%;
+  }
+  
+  .time-display {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: #6c757d;
+  }
+  
+  .download-container {
+    margin-top: 20px;
+    text-align: center;
+  }
+  </style>

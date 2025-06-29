@@ -1,30 +1,58 @@
 {% extends "base.html" %}
 
 {% block content %}
-<textarea id="textEditor" rows="20" cols="80">
-  {{ extracted_text }}
-</textarea>
-
-<div class="text-info">
-  <span id="charCount">0</span>/5000 characters
+<div class="text-editor-container">
+  <h2>Edit Text Before Conversion</h2>
+  
+  <form method="post">
+    {% csrf_token %}
+    <div class="editor-controls">
+      <div class="char-counter">
+        <span id="char-count">0</span>/<span id="char-limit">5000</span> characters
+      </div>
+      <button type="button" id="format-cleanup" class="btn btn-sm btn-secondary">
+        Cleanup Formatting
+      </button>
+    </div>
+    
+    <textarea id="text-editor" name="text_content" rows="20">{{ initial_text }}</textarea>
+    
+    <div class="editor-actions">
+      <button type="submit" class="btn btn-primary">Generate Audio</button>
+    </div>
+  </form>
 </div>
 
-<button id="generateAudio">Generate Audio</button>
-
 <script>
-  // Character counter with warning
-  const textarea = document.getElementById('textEditor');
-  const charCount = document.getElementById('charCount');
+document.addEventListener('DOMContentLoaded', function() {
+  const editor = document.getElementById('text-editor');
+  const charCount = document.getElementById('char-count');
+  const charLimit = document.getElementById('char-limit');
+  const limit = 5000;
   
-  textarea.addEventListener('input', () => {
-    const count = textarea.value.length;
+  editor.addEventListener('input', function() {
+    const count = editor.value.length;
     charCount.textContent = count;
     
-    if (count > 5000) {
+    if (count > limit) {
       charCount.style.color = 'red';
+      editor.value = editor.value.substring(0, limit);
     } else {
       charCount.style.color = 'inherit';
     }
   });
+  
+  // Initialize count
+  charCount.textContent = editor.value.length;
+  
+  // Cleanup formatting
+  document.getElementById('format-cleanup').addEventListener('click', function() {
+    editor.value = editor.value
+      .replace(/\n{3,}/g, '\n\n')  // Reduce multiple newlines
+      .replace(/\s{2,}/g, ' ')     // Reduce multiple spaces
+      .replace(/(\w)-\n(\w)/g, '$1$2')  // Fix hyphenated words
+      .trim();
+  });
+});
 </script>
 {% endblock %}
