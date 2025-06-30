@@ -1,7 +1,11 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from .models import PDFDocument, ProcessedDocument
-from .utils import generate_thumbnails, extract_pdf_text
+from .utils import generate_page_thumbnails, extract_pdf_text
+import json
+import os
+from django.conf import settings
+from .tasks import generate_audio_task
 
 @login_required
 def upload_pdf(request):
@@ -15,22 +19,24 @@ def upload_pdf(request):
     return render(request, 'converter/upload.html')
 
 @login_required
-def page_selection(request, file_id):
+def select_pages(request, file_id):
     document = get_object_or_404(PdfDocument, id=file_id, user=request.user)
+    
+    # Create thumbnail directory path
     thumbnail_dir = os.path.join(settings.MEDIA_ROOT, 'thumbnails', str(document.id))
     
+    # Generate thumbnails if they don't exist
     if not os.path.exists(thumbnail_dir):
-        thumbnails = generate_page_thumbnails(
-            document.file.path,
-            thumbnail_dir
-        )
-    else:
-        thumbnails = [f for f in os.listdir(thumbnail_dir) if f.endswith('.jpg')]
+        os.makedirs(thumbnail_dir, exist_ok=True)
+        generate_page_thumbnails(document.file.path, thumbnail_dir)
     
-    # Process deletion requests
+    # Get list of generated thumbnails
+    thumbnails = [f for f in os.listdir(thumbnail_dir) if f.endswith(('.jpg', '.jpeg', '.png'))]
+    
+    # Process form submission
     if request.method == 'POST':
         deleted_pages = request.POST.getlist('delete_pages')
-        document.deleted_pages = json.dumps([int(p) for p in deleted_pages])
+        document.deleted_pages = json.dumps(deleted_pages)
         document.save()
         return redirect('edit_text', file_id=document.id)
     

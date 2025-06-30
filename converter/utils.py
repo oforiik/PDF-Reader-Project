@@ -24,6 +24,17 @@ def generate_thumbnails(pdf_path):
         print(f"Error generating thumbnails: {e}")
         return []
 
+def generate_page_thumbnails(pdf_path, output_dir, max_pages=24):
+    images = convert_from_path(pdf_path, dpi=70, first_page=1, last_page=max_pages)
+    
+    for i, image in enumerate(images):
+        # Create thumbnail
+        image.thumbnail((200, 300))
+        thumb_path = os.path.join(output_dir, f"page_{i+1}.jpg")
+        image.save(thumb_path, "JPEG")
+    
+    return len(images)
+
 def extract_pdf_text(pdf_path):
     """
     Extract text from a PDF file.

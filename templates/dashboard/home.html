@@ -1,13 +1,49 @@
 {% extends "base/base.html" %}
 
 {% block content %}
-<h1>Welcome, {{ user.username }}!</h1>
-<div class="actions">
-    <a href="{% url 'converter:upload' %}" class="btn btn-primary">
-        Convert New PDF
-    </a>
-    <a href="{% url 'dashboard:file_manager' %}" class="btn btn-secondary">
-        View Previous Files
-    </a>
+<div class="hero-section text-center py-5">
+  <h1 class="display-4">PDF to Audio Converter</h1>
+  <p class="lead">Transform your documents into listenable content</p>
+  
+  <div class="mt-4">
+    {% if user.is_authenticated %}
+      <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg">
+        Go to Dashboard
+      </a>
+    {% else %}
+      <a href="{% url 'account:login' %}" class="btn btn-primary btn-lg mr-2">
+        Login
+      </a>
+      <a href="{% url 'account:signup' %}" class="btn btn-outline-primary btn-lg">
+        Sign Up
+      </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="features-section mt-5">
+  <div class="row">
+    <div class="col-md-4">
+      <div class="feature-card text-center p-4">
+        <i class="fas fa-file-pdf fa-3x mb-3"></i>
+        <h3>Upload PDFs</h3>
+        <p>Upload any PDF document for conversion</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="feature-card text-center p-4">
+        <i class="fas fa-edit fa-3x mb-3"></i>
+        <h3>Customize Content</h3>
+        <p>Select pages and edit text before conversion</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="feature-card text-center p-4">
+        <i class="fas fa-headphones fa-3x mb-3"></i>
+        <h3>Listen Anywhere</h3>
+        <p>Download audio files for on-the-go listening</p>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
